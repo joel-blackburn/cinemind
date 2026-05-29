@@ -1,10 +1,38 @@
+"use client";
+
+import { useState } from "react";
+
+type Movie = {
+  id: number;
+  title: string;
+  release_date?: string;
+  vote_average?: number;
+  poster_path?: string;
+};
+
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  async function searchMovies() {
+    if (!query.trim()) return;
+
+    setLoading(true);
+
+    const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    setMovies(data.results || []);
+    setLoading(false);
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-black text-white">
-      <section className="relative flex min-h-screen items-center justify-center px-6">
+      <section className="relative flex min-h-screen items-center justify-center px-6 py-20">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#3b0764_0%,#111827_35%,#000000_75%)] opacity-80" />
 
-        <div className="relative z-10 max-w-3xl text-center">
+        <div className="relative z-10 w-full max-w-6xl text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.35em] text-purple-300">
             CineMind
           </p>
@@ -14,21 +42,27 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-gray-300">
-            AI-powered movie recommendations based on your mood, taste, watch
-            history and the kind of night you&apos;re planning.
+            Start with a film you already love and CineMind will learn your
+            taste.
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <button className="rounded-full bg-white px-7 py-3 text-sm font-semibold text-black transition hover:bg-gray-200">
-              Get Recommendations
-            </button>
+          <div className="mx-auto mt-10 flex max-w-2xl flex-col gap-3 sm:flex-row">
+            <input
+              className="w-full rounded-full border border-white/10 bg-white/10 px-5 py-4 text-white outline-none placeholder:text-gray-500"
+              placeholder="Try The Prestige, Oldboy, Se7en..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
 
-            <button className="rounded-full border border-white/20 px-7 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-              View Watchlist
+            <button
+              onClick={searchMovies}
+              className="rounded-full bg-white px-8 py-4 font-semibold text-black transition hover:bg-gray-200"
+            >
+              {loading ? "Searching..." : "Search"}
             </button>
           </div>
 
-          <div className="mt-12 grid gap-4 text-left sm:grid-cols-3">
+          <div className="mx-auto mt-12 grid max-w-3xl gap-4 text-left sm:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
               <p className="text-sm font-semibold text-purple-200">
                 Mood aware
@@ -56,6 +90,37 @@ export default function Home() {
               </p>
             </div>
           </div>
+
+          {movies.length > 0 && (
+            <div className="mt-16 text-left">
+              <h2 className="mb-6 text-2xl font-bold">Search results</h2>
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {movies.map((movie) => (
+                  <article
+                    key={movie.id}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+                  >
+                    {movie.poster_path && (
+                      <img
+                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                        alt={movie.title}
+                        className="h-80 w-full object-cover"
+                      />
+                    )}
+
+                    <div className="p-4">
+                      <h3 className="font-semibold">{movie.title}</h3>
+                      <p className="mt-1 text-sm text-gray-400">
+                        {movie.release_date?.slice(0, 4) || "Unknown"} · ⭐{" "}
+                        {movie.vote_average?.toFixed(1) || "N/A"}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </main>
