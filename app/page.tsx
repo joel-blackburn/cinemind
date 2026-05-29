@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Movie = {
   id: number;
@@ -13,7 +13,20 @@ type Movie = {
 export default function Home() {
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [watchlist, setWatchlist] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedWatchlist = localStorage.getItem("cinemind-watchlist");
+
+    if (savedWatchlist) {
+      setWatchlist(JSON.parse(savedWatchlist));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("cinemind-watchlist", JSON.stringify(watchlist));
+  }, [watchlist]);
 
   async function searchMovies() {
     if (!query.trim()) return;
@@ -25,6 +38,22 @@ export default function Home() {
 
     setMovies(data.results || []);
     setLoading(false);
+  }
+
+  function addToWatchlist(movie: Movie) {
+    const alreadySaved = watchlist.some((item) => item.id === movie.id);
+
+    if (alreadySaved) return;
+
+    setWatchlist([...watchlist, movie]);
+  }
+
+  function removeFromWatchlist(movieId: number) {
+    setWatchlist(watchlist.filter((movie) => movie.id !== movieId));
+  }
+
+  function isInWatchlist(movieId: number) {
+    return watchlist.some((movie) => movie.id === movieId);
   }
 
   return (
@@ -52,6 +81,9 @@ export default function Home() {
               placeholder="Try The Prestige, Oldboy, Se7en..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") searchMovies();
+              }}
             />
 
             <button
@@ -115,6 +147,54 @@ export default function Home() {
                         {movie.release_date?.slice(0, 4) || "Unknown"} · ⭐{" "}
                         {movie.vote_average?.toFixed(1) || "N/A"}
                       </p>
+
+                      <button
+                        onClick={() => addToWatchlist(movie)}
+                        disabled={isInWatchlist(movie.id)}
+                        className="mt-4 w-full rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-purple-300"
+                      >
+                        {isInWatchlist(movie.id)
+                          ? "Saved to Watchlist"
+                          : "Save to Watchlist"}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {watchlist.length > 0 && (
+            <div className="mt-16 text-left">
+              <h2 className="mb-6 text-2xl font-bold">Your watchlist</h2>
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {watchlist.map((movie) => (
+                  <article
+                    key={movie.id}
+                    className="overflow-hidden rounded-2xl border border-purple-300/20 bg-purple-300/10"
+                  >
+                    {movie.poster_path && (
+                      <img
+                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                        alt={movie.title}
+                        className="h-80 w-full object-cover"
+                      />
+                    )}
+
+                    <div className="p-4">
+                      <h3 className="font-semibold">{movie.title}</h3>
+                      <p className="mt-1 text-sm text-gray-400">
+                        {movie.release_date?.slice(0, 4) || "Unknown"} · ⭐{" "}
+                        {movie.vote_average?.toFixed(1) || "N/A"}
+                      </p>
+
+                      <button
+                        onClick={() => removeFromWatchlist(movie.id)}
+                        className="mt-4 w-full rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </article>
                 ))}
