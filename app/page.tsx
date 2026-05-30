@@ -26,6 +26,12 @@ type RecommendationPreferences = {
   avoid: string[];
 };
 
+type Recommendation = {
+  title: string;
+  reason: string;
+  score: number;
+};
+
 const genreOptions = [
   "Thriller",
   "Mystery",
@@ -54,6 +60,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [submittedPreferences, setSubmittedPreferences] =
     useState<RecommendationPreferences | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
 
   const [preferences, setPreferences] = useState<RecommendationPreferences>({
     mood: "Mind-bending",
@@ -102,6 +110,37 @@ export default function Home() {
     const res = await fetch(`/api/movie/${movieId}`);
     const data = await res.json();
     setSelectedMovie(data);
+  }
+
+  async function getRecommendations() {
+    setRecommendationLoading(true);
+
+    const res = await fetch("/api/recommendations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        watchlist,
+        preferences,
+      }),
+    });
+
+    const data = await res.json();
+
+    setRecommendations(data.recommendations || []);
+    setRecommendationLoading(false);
+  }
+
+  async function saveRecommendationToWatchlist(title: string) {
+    const res = await fetch(`/api/search?query=${encodeURIComponent(title)}`);
+    const data = await res.json();
+
+    const firstMatch = data.results?.[0];
+
+    if (!firstMatch) return;
+
+    addToWatchlist(firstMatch);
   }
 
   function addToWatchlist(movie: Movie) {
@@ -334,10 +373,46 @@ export default function Home() {
                   Avoid:{" "}
                   {submittedPreferences.avoid.join(", ") || "Nothing specific"}
                 </p>
+
+                <button
+                  onClick={getRecommendations}
+                  className="mt-6 rounded-full bg-white px-7 py-3 font-semibold text-black transition hover:bg-gray-200"
+                >
+                  {recommendationLoading ? "Thinking..." : "Recommend For Me"}
+                </button>
               </div>
             )}
           </div>
+          {recommendations.length > 0 && (
+            <div className="mt-16 text-left">
+              <h2 className="mb-6 text-2xl font-bold">Recommended for you</h2>
 
+              <div className="grid gap-6 md:grid-cols-2">
+                {recommendations.map((rec) => (
+                  <article
+                    key={rec.title}
+                    className="rounded-2xl border border-purple-300/20 bg-purple-300/10 p-6"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <h3 className="text-xl font-bold">{rec.title}</h3>
+
+                      <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-black">
+                        {rec.score}/10
+                      </span>
+                    </div>
+
+                    <p className="mt-4 leading-7 text-gray-300">{rec.reason}</p>
+                    <button
+                      onClick={() => saveRecommendationToWatchlist(rec.title)}
+                      className="mt-6 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-gray-200"
+                    >
+                      Save to Watchlist
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
           {movies.length > 0 && (
             <div className="mt-16 text-left">
               <h2 className="mb-6 text-2xl font-bold">Search results</h2>
