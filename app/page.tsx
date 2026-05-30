@@ -77,7 +77,7 @@ export default function Home() {
     watchingWith: "Solo",
     runtime: "Under 2 hours",
     intensity: "Medium",
-    twistLevel: "High",
+    twistLevel: "Keeps You Guessing",
     genres: ["Thriller", "Mystery"],
     avoid: [],
   });
@@ -361,7 +361,13 @@ export default function Home() {
                 [
                   "twistLevel",
                   "Twist level",
-                  ["Low", "Medium", "High", "Break my brain"],
+                  [
+                    "Straightforward",
+                    "A Few Surprises",
+                    "Keeps You Guessing",
+                    "Twisty",
+                    "Break my brain",
+                  ],
                 ],
               ].map(([key, label, options]) => (
                 <label key={key as string} className="block">
