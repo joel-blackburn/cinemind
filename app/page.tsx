@@ -30,6 +30,7 @@ type Recommendation = {
   title: string;
   reason: string;
   score: number;
+  movie?: Movie;
 };
 
 const genreOptions = [
@@ -128,7 +129,21 @@ export default function Home() {
 
     const data = await res.json();
 
-    setRecommendations(data.recommendations || []);
+    const enrichedRecommendations = await Promise.all(
+      (data.recommendations || []).map(async (rec: Recommendation) => {
+        const searchRes = await fetch(
+          `/api/search?query=${encodeURIComponent(rec.title)}`,
+        );
+        const searchData = await searchRes.json();
+
+        return {
+          ...rec,
+          movie: searchData.results?.[0],
+        };
+      }),
+    );
+
+    setRecommendations(enrichedRecommendations);
     setRecommendationLoading(false);
   }
 
@@ -391,23 +406,70 @@ export default function Home() {
                 {recommendations.map((rec) => (
                   <article
                     key={rec.title}
-                    className="rounded-2xl border border-purple-300/20 bg-purple-300/10 p-6"
+                    className="overflow-hidden rounded-2xl border border-purple-300/20 bg-purple-300/10"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <h3 className="text-xl font-bold">{rec.title}</h3>
+                    {rec.movie?.poster_path && (
+                      <button
+                        onClick={() => openMovieDetails(rec.movie!.id)}
+                        className="block w-full"
+                      >
+                        <img
+                          src={`https://image.tmdb.org/t/p/w500${rec.movie.poster_path}`}
+                          alt={rec.title}
+                          className="h-80 w-full object-cover transition hover:scale-105"
+                        />
+                      </button>
+                    )}
 
-                      <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-black">
-                        {rec.score}/10
-                      </span>
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <button
+                            onClick={() =>
+                              rec.movie
+                                ? openMovieDetails(rec.movie.id)
+                                : undefined
+                            }
+                            className="text-left"
+                          >
+                            <h3 className="text-xl font-bold hover:text-purple-200">
+                              {rec.title}
+                            </h3>
+                          </button>
+
+                          {rec.movie && (
+                            <p className="mt-1 text-sm text-gray-400">
+                              {rec.movie.release_date?.slice(0, 4) || "Unknown"}{" "}
+                              · ⭐ {rec.movie.vote_average?.toFixed(1) || "N/A"}
+                            </p>
+                          )}
+                        </div>
+
+                        <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-black">
+                          {rec.score}/10
+                        </span>
+                      </div>
+
+                      <p className="mt-4 leading-7 text-gray-300">
+                        {rec.reason}
+                      </p>
+
+                      <button
+                        onClick={() =>
+                          rec.movie
+                            ? addToWatchlist(rec.movie)
+                            : saveRecommendationToWatchlist(rec.title)
+                        }
+                        disabled={
+                          rec.movie ? isInWatchlist(rec.movie.id) : false
+                        }
+                        className="mt-6 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-purple-300"
+                      >
+                        {rec.movie && isInWatchlist(rec.movie.id)
+                          ? "Saved to Watchlist"
+                          : "Save to Watchlist"}
+                      </button>
                     </div>
-
-                    <p className="mt-4 leading-7 text-gray-300">{rec.reason}</p>
-                    <button
-                      onClick={() => saveRecommendationToWatchlist(rec.title)}
-                      className="mt-6 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-gray-200"
-                    >
-                      Save to Watchlist
-                    </button>
                   </article>
                 ))}
               </div>
