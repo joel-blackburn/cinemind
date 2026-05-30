@@ -16,19 +16,58 @@ type MovieDetails = Movie & {
   genres?: { id: number; name: string }[];
 };
 
+type RecommendationPreferences = {
+  mood: string;
+  watchingWith: string;
+  runtime: string;
+  intensity: string;
+  twistLevel: string;
+  genres: string[];
+  avoid: string[];
+};
+
+const genreOptions = [
+  "Thriller",
+  "Mystery",
+  "Sci-Fi",
+  "Drama",
+  "Comedy",
+  "Action",
+  "Horror",
+  "Crime",
+];
+
+const avoidOptions = [
+  "Too scary",
+  "Too slow",
+  "Subtitles",
+  "Kids-unfriendly",
+  "Over 2.5 hours",
+  "Romance-heavy",
+];
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState<Movie[]>([]);
   const [watchlist, setWatchlist] = useState<Movie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<MovieDetails | null>(null);
   const [loading, setLoading] = useState(false);
+  const [submittedPreferences, setSubmittedPreferences] =
+    useState<RecommendationPreferences | null>(null);
+
+  const [preferences, setPreferences] = useState<RecommendationPreferences>({
+    mood: "Mind-bending",
+    watchingWith: "Solo",
+    runtime: "Under 2 hours",
+    intensity: "Medium",
+    twistLevel: "High",
+    genres: ["Thriller", "Mystery"],
+    avoid: [],
+  });
 
   useEffect(() => {
     const savedWatchlist = localStorage.getItem("cinemind-watchlist");
-
-    if (savedWatchlist) {
-      setWatchlist(JSON.parse(savedWatchlist));
-    }
+    if (savedWatchlist) setWatchlist(JSON.parse(savedWatchlist));
   }, []);
 
   useEffect(() => {
@@ -39,10 +78,8 @@ export default function Home() {
     if (!query.trim()) return;
 
     setLoading(true);
-
     const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
     const data = await res.json();
-
     setMovies(data.results || []);
     setLoading(false);
   }
@@ -54,10 +91,7 @@ export default function Home() {
   }
 
   function addToWatchlist(movie: Movie) {
-    const alreadySaved = watchlist.some((item) => item.id === movie.id);
-
-    if (alreadySaved) return;
-
+    if (watchlist.some((item) => item.id === movie.id)) return;
     setWatchlist([...watchlist, movie]);
   }
 
@@ -67,6 +101,28 @@ export default function Home() {
 
   function isInWatchlist(movieId: number) {
     return watchlist.some((movie) => movie.id === movieId);
+  }
+
+  function toggleGenre(genre: string) {
+    setPreferences((current) => ({
+      ...current,
+      genres: current.genres.includes(genre)
+        ? current.genres.filter((item) => item !== genre)
+        : [...current.genres, genre],
+    }));
+  }
+
+  function toggleAvoid(option: string) {
+    setPreferences((current) => ({
+      ...current,
+      avoid: current.avoid.includes(option)
+        ? current.avoid.filter((item) => item !== option)
+        : [...current.avoid, option],
+    }));
+  }
+
+  function submitPreferences() {
+    setSubmittedPreferences(preferences);
   }
 
   return (
@@ -108,32 +164,162 @@ export default function Home() {
           </div>
 
           <div className="mx-auto mt-12 grid max-w-3xl gap-4 text-left sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <p className="text-sm font-semibold text-purple-200">
-                Mood aware
-              </p>
-              <p className="mt-2 text-sm text-gray-400">
-                Pick the vibe and let CineMind narrow the field.
-              </p>
+            {["Mood aware", "Twist tuned", "Built for taste"].map((title) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-white/10 bg-white/5 p-5"
+              >
+                <p className="text-sm font-semibold text-purple-200">{title}</p>
+                <p className="mt-2 text-sm text-gray-400">
+                  {title === "Mood aware" &&
+                    "Pick the vibe and let CineMind narrow the field."}
+                  {title === "Twist tuned" &&
+                    "Choose whether you want easy viewing or a proper mind-bender."}
+                  {title === "Built for taste" &&
+                    "Designed to learn what you love and avoid repeat suggestions."}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-16 rounded-3xl border border-white/10 bg-white/5 p-6 text-left">
+            <h2 className="text-2xl font-bold">Recommendation preferences</h2>
+            <p className="mt-2 text-sm text-gray-400">
+              Tell CineMind what kind of movie night you&apos;re planning.
+            </p>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {[
+                [
+                  "mood",
+                  "Mood",
+                  [
+                    "Mind-bending",
+                    "Easy watch",
+                    "Dark",
+                    "Funny",
+                    "Emotional",
+                    "Tense",
+                  ],
+                ],
+                [
+                  "watchingWith",
+                  "Watching with",
+                  ["Solo", "Koby", "Kids", "Friends", "Family"],
+                ],
+                [
+                  "runtime",
+                  "Runtime",
+                  [
+                    "Under 90 mins",
+                    "Under 2 hours",
+                    "Any length",
+                    "Epic is fine",
+                  ],
+                ],
+                [
+                  "intensity",
+                  "Intensity",
+                  ["Low", "Medium", "High", "Unhinged"],
+                ],
+                [
+                  "twistLevel",
+                  "Twist level",
+                  ["Low", "Medium", "High", "Break my brain"],
+                ],
+              ].map(([key, label, options]) => (
+                <label key={key as string} className="block">
+                  <span className="text-sm font-semibold text-purple-200">
+                    {label as string}
+                  </span>
+                  <select
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none"
+                    value={
+                      preferences[
+                        key as keyof RecommendationPreferences
+                      ] as string
+                    }
+                    onChange={(e) =>
+                      setPreferences({
+                        ...preferences,
+                        [key as string]: e.target.value,
+                      })
+                    }
+                  >
+                    {(options as string[]).map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
+              ))}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <p className="text-sm font-semibold text-purple-200">
-                Twist tuned
-              </p>
-              <p className="mt-2 text-sm text-gray-400">
-                Choose whether you want easy viewing or a proper mind-bender.
-              </p>
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-purple-200">Genres</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {genreOptions.map((genre) => (
+                  <button
+                    key={genre}
+                    onClick={() => toggleGenre(genre)}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      preferences.genres.includes(genre)
+                        ? "bg-purple-300 text-black"
+                        : "border border-white/20 text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {genre}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <p className="text-sm font-semibold text-purple-200">
-                Built for taste
-              </p>
-              <p className="mt-2 text-sm text-gray-400">
-                Designed to learn what you love and avoid repeat suggestions.
-              </p>
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-purple-200">Avoid</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {avoidOptions.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => toggleAvoid(option)}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      preferences.avoid.includes(option)
+                        ? "bg-white text-black"
+                        : "border border-white/20 text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <button
+              onClick={submitPreferences}
+              className="mt-8 rounded-full bg-white px-7 py-3 font-semibold text-black transition hover:bg-gray-200"
+            >
+              Save preferences
+            </button>
+
+            {submittedPreferences && (
+              <div className="mt-8 rounded-2xl border border-purple-300/20 bg-purple-300/10 p-5">
+                <h3 className="font-semibold text-purple-200">
+                  Saved recommendation brief
+                </h3>
+                <p className="mt-3 text-sm text-gray-300">
+                  {submittedPreferences.mood} movie, watching with{" "}
+                  {submittedPreferences.watchingWith}, runtime{" "}
+                  {submittedPreferences.runtime}, intensity{" "}
+                  {submittedPreferences.intensity}, twist level{" "}
+                  {submittedPreferences.twistLevel}.
+                </p>
+                <p className="mt-2 text-sm text-gray-400">
+                  Genres: {submittedPreferences.genres.join(", ") || "Any"}
+                </p>
+                <p className="mt-1 text-sm text-gray-400">
+                  Avoid:{" "}
+                  {submittedPreferences.avoid.join(", ") || "Nothing specific"}
+                </p>
+              </div>
+            )}
           </div>
 
           {movies.length > 0 && (
