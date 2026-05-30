@@ -65,6 +65,12 @@ export default function Home() {
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [recommendationError, setRecommendationError] = useState("");
+  const [recommendationProgress, setRecommendationProgress] = useState(0);
+
+  const recommendationLoadingMessages = ["Finding your next obsession..."];
+
+  const [recommendationLoadingMessage, setRecommendationLoadingMessage] =
+    useState(recommendationLoadingMessages[0]);
 
   const [preferences, setPreferences] = useState<RecommendationPreferences>({
     mood: "Mind-bending",
@@ -98,6 +104,33 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("cinemind-preferences", JSON.stringify(preferences));
   }, [preferences]);
+
+  useEffect(() => {
+    if (!recommendationLoading) {
+      setRecommendationProgress(0);
+      return;
+    }
+
+    let index = 0;
+    let progress = 12;
+
+    setRecommendationLoadingMessage(recommendationLoadingMessages[0]);
+    setRecommendationProgress(progress);
+
+    const interval = setInterval(() => {
+      index = Math.min(index + 1, recommendationLoadingMessages.length - 1);
+      progress = Math.min(progress + 18, 88);
+
+      setRecommendationLoadingMessage(recommendationLoadingMessages[index]);
+      setRecommendationProgress(progress);
+
+      if (progress >= 88) {
+        clearInterval(interval);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [recommendationLoading]);
 
   async function searchMovies() {
     if (!query.trim()) return;
@@ -134,6 +167,7 @@ export default function Home() {
   async function getRecommendations() {
     setRecommendationLoading(true);
     setRecommendationError("");
+    setRecommendationLoadingMessage(recommendationLoadingMessages[0]);
 
     try {
       const res = await fetch("/api/recommendations", {
@@ -166,7 +200,7 @@ export default function Home() {
           };
         }),
       );
-
+      setRecommendationProgress(100);
       setRecommendations(enrichedRecommendations);
     } catch {
       setRecommendationError(
@@ -423,10 +457,38 @@ export default function Home() {
 
                 <button
                   onClick={getRecommendations}
+                  disabled={recommendationLoading}
                   className="mt-6 rounded-full bg-white px-7 py-3 font-semibold text-black transition hover:bg-gray-200"
                 >
-                  {recommendationLoading ? "Thinking..." : "Recommend For Me"}
+                  {recommendationLoading
+                    ? recommendationLoadingMessage
+                    : "Recommend For Me"}
                 </button>
+                {recommendationLoading && (
+                  <div className="mt-5 rounded-2xl border border-purple-300/20 bg-black/40 p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm font-semibold text-purple-200">
+                        {recommendationLoadingMessage}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        This can take 20–30 seconds
+                      </p>
+                    </div>
+
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-purple-300 transition-all duration-700"
+                        style={{ width: `${recommendationProgress}%` }}
+                      />
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-xs text-gray-400 sm:grid-cols-3">
+                      <span>✓ Reading your taste</span>
+                      <span>✓ Finding patterns</span>
+                      <span>✓ Matching films</span>
+                    </div>
+                  </div>
+                )}
                 {recommendationError && (
                   <p className="mt-4 text-sm text-red-300">
                     {recommendationError}
