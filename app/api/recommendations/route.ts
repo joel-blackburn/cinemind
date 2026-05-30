@@ -13,21 +13,21 @@ export async function POST(request: Request) {
 You are an expert movie recommendation engine.
 
 The user has saved these movies:
-
 ${watchlist.map((m: { title: string }) => `- ${m.title}`).join("\n")}
 
 Preferences:
-
 ${JSON.stringify(preferences, null, 2)}
 
 Recommend 5 movies.
 
 For each movie provide:
-- Title
-- Why it was chosen
-- CineMind Score out of 10
+- title
+- reason
+- score as a number out of 10
 
-Return valid JSON in this format:
+Return ONLY valid JSON. Do not include markdown. Do not wrap it in a code block.
+
+Use this exact format:
 
 {
   "recommendations": [
@@ -45,7 +45,19 @@ Return valid JSON in this format:
     input: prompt,
   });
 
-  return Response.json({
-    output: response.output_text,
-  });
+  const rawOutput = response.output_text;
+
+  try {
+    const parsedOutput = JSON.parse(rawOutput);
+
+    return Response.json(parsedOutput);
+  } catch {
+    return Response.json(
+      {
+        error: "Failed to parse recommendation response",
+        rawOutput,
+      },
+      { status: 500 },
+    );
+  }
 }
