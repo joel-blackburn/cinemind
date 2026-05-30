@@ -67,12 +67,26 @@ export default function Home() {
 
   useEffect(() => {
     const savedWatchlist = localStorage.getItem("cinemind-watchlist");
-    if (savedWatchlist) setWatchlist(JSON.parse(savedWatchlist));
+
+    if (savedWatchlist) {
+      setWatchlist(JSON.parse(savedWatchlist));
+    }
+
+    const savedPreferences = localStorage.getItem("cinemind-preferences");
+
+    if (savedPreferences) {
+      setPreferences(JSON.parse(savedPreferences));
+      setSubmittedPreferences(JSON.parse(savedPreferences));
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem("cinemind-watchlist", JSON.stringify(watchlist));
   }, [watchlist]);
+
+  useEffect(() => {
+    localStorage.setItem("cinemind-preferences", JSON.stringify(preferences));
+  }, [preferences]);
 
   async function searchMovies() {
     if (!query.trim()) return;
@@ -123,6 +137,8 @@ export default function Home() {
 
   function submitPreferences() {
     setSubmittedPreferences(preferences);
+
+    localStorage.setItem("cinemind-preferences", JSON.stringify(preferences));
   }
 
   return (
