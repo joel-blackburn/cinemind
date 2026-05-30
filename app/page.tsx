@@ -63,6 +63,8 @@ export default function Home() {
     useState<RecommendationPreferences | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [recommendationError, setRecommendationError] = useState("");
 
   const [preferences, setPreferences] = useState<RecommendationPreferences>({
     mood: "Mind-bending",
@@ -101,10 +103,26 @@ export default function Home() {
     if (!query.trim()) return;
 
     setLoading(true);
-    const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    setMovies(data.results || []);
-    setLoading(false);
+    setSearchError("");
+
+    try {
+      const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+
+      if (!res.ok) {
+        throw new Error("Movie search failed");
+      }
+
+      const data = await res.json();
+      setMovies(data.results || []);
+
+      if (!data.results?.length) {
+        setSearchError("No movies found. Try another title.");
+      }
+    } catch {
+      setSearchError("Something went wrong while searching. Try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function openMovieDetails(movieId: number) {
@@ -115,36 +133,48 @@ export default function Home() {
 
   async function getRecommendations() {
     setRecommendationLoading(true);
+    setRecommendationError("");
 
-    const res = await fetch("/api/recommendations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        watchlist,
-        preferences,
-      }),
-    });
+    try {
+      const res = await fetch("/api/recommendations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          watchlist,
+          preferences,
+        }),
+      });
 
-    const data = await res.json();
+      if (!res.ok) {
+        throw new Error("Recommendation request failed");
+      }
 
-    const enrichedRecommendations = await Promise.all(
-      (data.recommendations || []).map(async (rec: Recommendation) => {
-        const searchRes = await fetch(
-          `/api/search?query=${encodeURIComponent(rec.title)}`,
-        );
-        const searchData = await searchRes.json();
+      const data = await res.json();
 
-        return {
-          ...rec,
-          movie: searchData.results?.[0],
-        };
-      }),
-    );
+      const enrichedRecommendations = await Promise.all(
+        (data.recommendations || []).map(async (rec: Recommendation) => {
+          const searchRes = await fetch(
+            `/api/search?query=${encodeURIComponent(rec.title)}`,
+          );
+          const searchData = await searchRes.json();
 
-    setRecommendations(enrichedRecommendations);
-    setRecommendationLoading(false);
+          return {
+            ...rec,
+            movie: searchData.results?.[0],
+          };
+        }),
+      );
+
+      setRecommendations(enrichedRecommendations);
+    } catch {
+      setRecommendationError(
+        "CineMind could not generate recommendations. Try again.",
+      );
+    } finally {
+      setRecommendationLoading(false);
+    }
   }
 
   async function saveRecommendationToWatchlist(title: string) {
@@ -232,7 +262,9 @@ export default function Home() {
               {loading ? "Searching..." : "Search"}
             </button>
           </div>
-
+          {searchError && (
+            <p className="mt-4 text-sm text-red-300">{searchError}</p>
+          )}
           <div className="mx-auto mt-12 grid max-w-3xl gap-4 text-left sm:grid-cols-3">
             {["Mood aware", "Twist tuned", "Built for taste"].map((title) => (
               <div
@@ -395,6 +427,11 @@ export default function Home() {
                 >
                   {recommendationLoading ? "Thinking..." : "Recommend For Me"}
                 </button>
+                {recommendationError && (
+                  <p className="mt-4 text-sm text-red-300">
+                    {recommendationError}
+                  </p>
+                )}
               </div>
             )}
           </div>
