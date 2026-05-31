@@ -8,6 +8,7 @@ type Movie = {
   release_date?: string;
   vote_average?: number;
   poster_path?: string;
+  runtime?: number;
 };
 
 type MovieDetails = Movie & {
@@ -168,6 +169,7 @@ export default function Home() {
     setRecommendationLoading(true);
     setRecommendationError("");
     setRecommendationLoadingMessage(recommendationLoadingMessages[0]);
+    setRecommendationProgress(12);
 
     try {
       const res = await fetch("/api/recommendations", {
@@ -189,20 +191,67 @@ export default function Home() {
 
       const enrichedRecommendations = await Promise.all(
         (data.recommendations || []).map(async (rec: Recommendation) => {
-          const searchRes = await fetch(
-            `/api/search?query=${encodeURIComponent(rec.title)}`,
-          );
-          const searchData = await searchRes.json();
+          try {
+            const searchRes = await fetch(
+              `/api/search?query=${encodeURIComponent(rec.title)}`,
+            );
 
-          return {
-            ...rec,
-            movie: searchData.results?.[0],
-          };
+            if (!searchRes.ok) {
+              return {
+                ...rec,
+                movie: undefined,
+              };
+            }
+
+            const searchData = await searchRes.json();
+            const movie = searchData.results?.[0];
+
+            if (!movie) {
+              return {
+                ...rec,
+                movie: undefined,
+              };
+            }
+
+            try {
+              const detailsRes = await fetch(`/api/movie/${movie.id}`);
+
+              if (!detailsRes.ok) {
+                return {
+                  ...rec,
+                  movie,
+                };
+              }
+
+              const movieDetails = await detailsRes.json();
+
+              return {
+                ...rec,
+                movie: {
+                  ...movie,
+                  runtime: movieDetails.runtime,
+                },
+              };
+            } catch {
+              return {
+                ...rec,
+                movie,
+              };
+            }
+          } catch {
+            return {
+              ...rec,
+              movie: undefined,
+            };
+          }
         }),
       );
+
       setRecommendationProgress(100);
       setRecommendations(enrichedRecommendations);
-    } catch {
+    } catch (error) {
+      console.error("Recommendation error:", error);
+
       setRecommendationError(
         "CineMind could not generate recommendations. Try again.",
       );
@@ -257,6 +306,17 @@ export default function Home() {
     setSubmittedPreferences(preferences);
 
     localStorage.setItem("cinemind-preferences", JSON.stringify(preferences));
+  }
+
+  function formatRuntime(runtime?: number) {
+    if (!runtime) return "Runtime unknown";
+
+    const hours = Math.floor(runtime / 60);
+    const minutes = runtime % 60;
+
+    if (hours === 0) return `${minutes}m`;
+
+    return `${hours}h ${minutes}m`;
   }
 
   return (
@@ -545,13 +605,14 @@ export default function Home() {
                           {rec.movie && (
                             <p className="mt-1 text-sm text-gray-400">
                               {rec.movie.release_date?.slice(0, 4) || "Unknown"}{" "}
-                              · ⭐ {rec.movie.vote_average?.toFixed(1) || "N/A"}
+                              · {formatRuntime(rec.movie.runtime)} · ⭐{" "}
+                              {rec.movie.vote_average?.toFixed(1) || "N/A"}
                             </p>
                           )}
                         </div>
 
                         <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-black">
-                          {rec.score}/10
+                          Cinemind Match {rec.score}/10
                         </span>
                       </div>
 
