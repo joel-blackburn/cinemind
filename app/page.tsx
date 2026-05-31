@@ -2,37 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-type Movie = {
-  id: number;
-  title: string;
-  release_date?: string;
-  vote_average?: number;
-  poster_path?: string;
-  runtime?: number;
-};
-
-type MovieDetails = Movie & {
-  overview?: string;
-  runtime?: number;
-  genres?: { id: number; name: string }[];
-};
-
-type RecommendationPreferences = {
-  mood: string;
-  watchingWith: string;
-  runtime: string;
-  intensity: string;
-  twistLevel: string;
-  genres: string[];
-  avoid: string[];
-};
-
-type Recommendation = {
-  title: string;
-  reason: string;
-  score: number;
-  movie?: Movie;
-};
+import type { Movie, MovieDetails } from "@/types/movie";
+import type {
+  Recommendation,
+  RecommendationPreferences,
+} from "@/types/recommendation";
 
 const genreOptions = [
   "Thriller",
