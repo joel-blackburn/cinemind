@@ -39,15 +39,22 @@ Use this exact format:
   ]
 }
 `;
-
+  const start = Date.now();
   const response = await client.responses.create({
     model: "gpt-5",
     input: prompt,
+    reasoning: {
+      effort: "minimal",
+    },
   });
+
+  console.log(`OpenAI call took ${(Date.now() - start) / 1000} seconds`);
 
   const rawOutput = response.output_text;
 
   try {
+    console.log("GPT RESPONSE:");
+    console.log(rawOutput);
     const parsedOutput = JSON.parse(rawOutput);
 
     return Response.json(parsedOutput);
