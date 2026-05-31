@@ -18,10 +18,10 @@ ${watchlist.map((m: { title: string }) => `- ${m.title}`).join("\n")}
 Preferences:
 ${JSON.stringify(preferences, null, 2)}
 
-Recommend 5 movies.
+Recommend 4 movies.
 
 For each movie provide:
-- title
+- title only (do not include release year or any other info in the title)
 - reason
 - score as a number out of 10
 
