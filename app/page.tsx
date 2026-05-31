@@ -284,6 +284,17 @@ export default function Home() {
     return watchlist.some((movie) => movie.id === movieId);
   }
 
+  function toggleWatchlist(movie: Movie) {
+    const alreadySaved = watchlist.some((item) => item.id === movie.id);
+
+    if (alreadySaved) {
+      removeFromWatchlist(movie.id);
+      return;
+    }
+
+    addToWatchlist(movie);
+  }
+
   function toggleGenre(genre: string) {
     setPreferences((current) => ({
       ...current,
@@ -536,9 +547,6 @@ export default function Home() {
                       <p className="text-sm font-semibold text-purple-200">
                         {recommendationLoadingMessage}
                       </p>
-                      <p className="text-xs text-gray-400">
-                        This can take 20–30 seconds
-                      </p>
                     </div>
 
                     <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
@@ -623,16 +631,17 @@ export default function Home() {
                       <button
                         onClick={() =>
                           rec.movie
-                            ? addToWatchlist(rec.movie)
+                            ? toggleWatchlist(rec.movie)
                             : saveRecommendationToWatchlist(rec.title)
                         }
-                        disabled={
-                          rec.movie ? isInWatchlist(rec.movie.id) : false
-                        }
-                        className="mt-6 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-purple-300"
+                        className={`mt-6 rounded-full px-5 py-2 text-sm font-semibold transition ${
+                          rec.movie && isInWatchlist(rec.movie.id)
+                            ? "border border-white/20 text-white hover:bg-white/10"
+                            : "bg-white text-black hover:bg-gray-200"
+                        }`}
                       >
                         {rec.movie && isInWatchlist(rec.movie.id)
-                          ? "Saved to Watchlist"
+                          ? "Remove from Watchlist"
                           : "Save to Watchlist"}
                       </button>
                     </div>
@@ -680,12 +689,15 @@ export default function Home() {
                       </p>
 
                       <button
-                        onClick={() => addToWatchlist(movie)}
-                        disabled={isInWatchlist(movie.id)}
-                        className="mt-4 w-full rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-purple-300"
+                        onClick={() => toggleWatchlist(movie)}
+                        className={`mt-4 w-full rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          isInWatchlist(movie.id)
+                            ? "border border-white/20 text-white hover:bg-white/10"
+                            : "bg-white text-black hover:bg-gray-200"
+                        }`}
                       >
                         {isInWatchlist(movie.id)
-                          ? "Saved to Watchlist"
+                          ? "Remove from Watchlist"
                           : "Save to Watchlist"}
                       </button>
                     </div>
@@ -796,12 +808,15 @@ export default function Home() {
                 </p>
 
                 <button
-                  onClick={() => addToWatchlist(selectedMovie)}
-                  disabled={isInWatchlist(selectedMovie.id)}
-                  className="mt-8 rounded-full bg-white px-6 py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-purple-300"
+                  onClick={() => toggleWatchlist(selectedMovie)}
+                  className={`mt-8 rounded-full px-6 py-3 font-semibold transition ${
+                    isInWatchlist(selectedMovie.id)
+                      ? "border border-white/20 text-white hover:bg-white/10"
+                      : "bg-white text-black hover:bg-gray-200"
+                  }`}
                 >
                   {isInWatchlist(selectedMovie.id)
-                    ? "Saved to Watchlist"
+                    ? "Remove from Watchlist"
                     : "Save to Watchlist"}
                 </button>
               </div>
