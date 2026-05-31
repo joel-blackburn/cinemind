@@ -67,7 +67,7 @@ export function RecommendationResults({
                 </div>
 
                 <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-black">
-                  Match {rec.score}/10
+                  Cimemind Match {rec.score}/10
                 </span>
               </div>
 
